@@ -3,42 +3,43 @@
  * @flow
  */
 
-import RCTBridge, { RCT_EXPORT_MODULE, RCT_EXPORT_METHOD } from "RCTBridge";
+import RCTBridge from "RCTBridge";
 import RCTEventEmitter from "RCTNativeEventEmitter";
 
-@RCT_EXPORT_MODULE("RCTDeviceInfo")
 class RCTDeviceInfo extends RCTEventEmitter {
+  static name = "RCTDeviceInfo";
+
   constructor(bridge: RCTBridge) {
     super(bridge);
 
     window.addEventListener(
       "resize",
-      this.didUpdateDimensions.bind(this),
+      this._didUpdateDimensions.bind(this),
       false
     );
 
     window
       .matchMedia("screen and (min-resolution: 2dppx)")
-      .addListener(this.didUpdateDimensions.bind(this));
+      .addListener(this._didUpdateDimensions.bind(this));
 
     this.listenerCount = 1;
   }
 
   constantsToExport() {
     return {
-      Dimensions: this.exportedDimensions()
+      Dimensions: this._exportedDimensions()
     };
   }
 
-  supportedEvents() {
+  _supportedEvents() {
     return ["didUpdateDimensions"];
   }
 
-  exportedDimensions() {
+  _exportedDimensions() {
     const dims = {
       width: Math.ceil(window.innerWidth),
       height: Math.ceil(window.innerHeight),
-      scale: this.getDevicePixelRatio(),
+      scale: this._getDevicePixelRatio(),
       fontScale: 1
     };
 
@@ -48,7 +49,7 @@ class RCTDeviceInfo extends RCTEventEmitter {
     };
   }
 
-  getDevicePixelRatio(): number {
+  _getDevicePixelRatio(): number {
     let ratio = 1;
     // To account for zoom, change to use deviceXDPI instead of systemXDPI
     if (
@@ -67,8 +68,8 @@ class RCTDeviceInfo extends RCTEventEmitter {
     return Math.min(ratio, 2);
   }
 
-  didUpdateDimensions() {
-    this.sendEventWithName("didUpdateDimensions", this.exportedDimensions());
+  _didUpdateDimensions() {
+    this.sendEventWithName("didUpdateDimensions", this._exportedDimensions());
   }
 }
 

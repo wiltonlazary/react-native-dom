@@ -3,11 +3,8 @@
  * @flow
  */
 
-import RCTBridge, {
-  RCT_EXPORT_MODULE,
-  RCT_EXPORT_METHOD,
-  RCTFunctionTypeNormal
-} from "RCTBridge";
+import RCTBridge from "RCTBridge";
+import RCTModule from "RCTModule";
 
 type Timer = {
   callbackId: number,
@@ -18,21 +15,18 @@ type Timer = {
 
 const IDLE_CALLBACK_THRESHOLD = 3; // Minimum idle execution time of 1ms
 
-@RCT_EXPORT_MODULE("RCTTiming")
-class RCTTiming {
-  bridge: RCTBridge;
+class RCTTiming extends RCTModule {
   timers: { [callbackId: string]: Timer };
   sendIdleEvents: boolean;
   targetFrameDuration: number;
 
   constructor(bridge: RCTBridge) {
-    this.bridge = bridge;
+    super(bridge);
     this.timers = {};
     this.sendIdleEvents = false;
     this.targetFrameDuration = 1000.0 / 60.0; // 60fps
   }
 
-  @RCT_EXPORT_METHOD(RCTFunctionTypeNormal)
   createTimer(
     callbackId: number,
     duration: number,
@@ -65,17 +59,15 @@ class RCTTiming {
     }
   }
 
-  @RCT_EXPORT_METHOD(RCTFunctionTypeNormal)
   deleteTimer(callbackId: number) {
     delete this.timers[String(callbackId)];
   }
 
-  @RCT_EXPORT_METHOD(RCTFunctionTypeNormal)
   setSendIdleEvents(sendIdle: boolean) {
     this.sendIdleEvents = sendIdle;
   }
 
-  frame() {
+  _frame() {
     const toRemove = [];
     const timers = [];
     const time = Date.now();
@@ -103,7 +95,7 @@ class RCTTiming {
     }
   }
 
-  idle(frameStart: number) {
+  _idle(frameStart: number) {
     if (!this.sendIdleEvents) {
       return;
     }
@@ -116,7 +108,7 @@ class RCTTiming {
     }
   }
 
-  shouldContinue(): boolean {
+  _shouldContinue(): boolean {
     return Object.keys(this.timers).length !== 0;
   }
 }

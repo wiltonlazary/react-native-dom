@@ -3,11 +3,7 @@
  * @flow
  */
 
-import RCTBridge, {
-  RCT_EXPORT_MODULE,
-  RCT_EXPORT_METHOD,
-  RCTFunctionTypeNormal
-} from "RCTBridge";
+import RCTBridge from "RCTBridge";
 import RCTEventEmitter from "RCTNativeEventEmitter";
 
 let hidden, visibilityChange;

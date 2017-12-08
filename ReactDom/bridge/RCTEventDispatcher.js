@@ -3,11 +3,8 @@
  * @flow
  */
 
-import RCTBridge, {
-  RCT_EXPORT_MODULE,
-  RCT_EXPORT_METHOD,
-  RCTFunctionTypeNormal
-} from "RCTBridge";
+import RCTBridge from "RCTBridge";
+import RCTModule from "RCTModule";
 import invariant from "Invariant";
 
 export const RCTTextEventType = {
@@ -61,9 +58,9 @@ function stringToHash(input: string): number {
   return hash;
 }
 
-@RCT_EXPORT_MODULE("RCTEventDispatcher")
-class RCTEventDispatcher {
-  bridge: RCTBridge;
+class RCTEventDispatcher extends RCTModule {
+  static name = "RCTEventDispatcher";
+
   events: { [number]: RCTEvent };
   eventQueue: Array<number>;
   // queueLock ??
@@ -80,7 +77,7 @@ class RCTEventDispatcher {
   }
 
   constructor(bridge: RCTBridge) {
-    this.bridge = bridge;
+    super(bridge);
     this.events = {};
     this.eventQueue = [];
     this.eventsDispatchScheduled = false;

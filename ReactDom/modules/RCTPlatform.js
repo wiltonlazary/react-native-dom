@@ -2,12 +2,11 @@
  * @providesModule RCTPlatform
  * @flow
  */
-import { RCT_EXPORT_MODULE } from "RCTBridge";
+import RCTModule from "RCTModule";
 
 const supportsTouchForceChange = "ontouchforcechange" in window.document;
 
-@RCT_EXPORT_MODULE("RCTPlatformConstants")
-class RCTPlatformConstants {
+class RCTPlatformConstants extends RCTModule {
   constantsToExport() {
     return {
       forceTouchAvailable: supportsTouchForceChange,

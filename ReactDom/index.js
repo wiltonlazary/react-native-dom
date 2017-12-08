@@ -18,10 +18,10 @@ import type RCTModule from "RCTModule";
 const builtinNativeModules: Class<RCTModule>[] = [];
 
 // Register Built-in Native Modules
-import "RCTEventDispatcher";
-import "RCTDeviceInfo";
-import "RCTPlatform";
-import "RCTTiming";
+builtinNativeModules.push(require("RCTEventDispatcher").default);
+builtinNativeModules.push(require("RCTDeviceInfo").default);
+builtinNativeModules.push(require("RCTPlatform").default);
+builtinNativeModules.push(require("RCTTiming").default);
 import "RCTUIManager";
 import "RCTViewManager";
 import "RCTTextManager";

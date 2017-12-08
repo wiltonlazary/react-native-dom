@@ -5,23 +5,14 @@
 import invariant from "Invariant";
 import { moduleConfigFactory } from "RCTModuleConfig";
 import NotificationCenter from "NotificationCenter";
-import {
-  RCTFunctionTypeNormal,
-  RCTFunctionTypePromise,
-  RCTFunctionTypeSync
-} from "RCTBridgeMethod";
+import RCTModule from "RCTModule";
 import type { ModuleConfig } from "RCTModuleConfig";
-import type { RCTFunctionType } from "RCTBridgeMethod";
 import type RCTEventDispatcher from "RCTEventDispatcher";
 import type RCTImageLoader from "RCTImageLoader";
 import type RCTDeviceInfo from "RCTDeviceInfo";
 import type RCTDevLoadingView from "RCTDevLoadingView";
 import type RCTDevSettings from "RCTDevSettings";
-import type RCTModule from "RCTModule";
 import type RCTUIManager from "RCTUIManager";
-
-export { RCTFunctionTypeNormal, RCTFunctionTypePromise, RCTFunctionTypeSync };
-export type { RCTFunctionType };
 
 type MessagePayload = {
   data: {
@@ -78,17 +69,8 @@ export interface ModuleClass {
   [string]: ?Function;
 }
 
-export function getPropertyNames(obj: ?Object): Array<string> {
-  if (obj == null) return [];
-
-  const currentPropertyNames = Object.getOwnPropertyNames(obj);
-  return currentPropertyNames.concat(
-    getPropertyNames(Object.getPrototypeOf(obj))
-  );
-}
-
-export function bridgeModuleNameForClass(cls: Class<ModuleClass>): string {
-  let name = cls.__moduleName;
+export function bridgeModuleNameForClass(cls: Class<RCTModule>): string {
+  let name = cls.name;
 
   if (name != null) {
     if (name.startsWith("RK")) {
@@ -102,46 +84,9 @@ export function bridgeModuleNameForClass(cls: Class<ModuleClass>): string {
   return "";
 }
 
-function generateModuleConfig(name: string, bridgeModule: ModuleClass) {
-  const methodNames = [...new Set(getPropertyNames(bridgeModule))].filter(
-    methodName => methodName.startsWith("__rct_export__")
-  );
-
-  const constants = bridgeModule.constantsToExport
-    ? bridgeModule.constantsToExport()
-    : undefined;
-
-  const allMethods = [];
-  const promiseMethods = [];
-  const syncMethods = [];
-
-  methodNames.forEach(rctName => {
-    if (bridgeModule[rctName]) {
-      const [methodName, methodType] = bridgeModule[rctName].call(bridgeModule);
-      allMethods.push(methodName);
-
-      if (methodType === RCTFunctionTypePromise) {
-        promiseMethods.push(allMethods.length - 1);
-      }
-
-      if (methodType === RCTFunctionTypeSync) {
-        syncMethods.push(allMethods.length - 1);
-      }
-    }
-  });
-
-  return [name, constants, allMethods, promiseMethods, syncMethods];
-}
-
 export default class RCTBridge {
-  static RCTModuleClasses: Class<ModuleClass>[] = [];
-
-  static RCTRegisterModule = (cls: Class<ModuleClass>) => {
-    RCTBridge.RCTModuleClasses.push(cls);
-  };
-
-  modulesByName: { [name: string]: ModuleClass } = {};
-  moduleClasses: Array<Class<ModuleClass>> = [];
+  modulesByName: { [name: string]: RCTModule } = {};
+  moduleClasses: Array<Class<RCTModule>> = [];
   moduleConfigs: Array<ModuleConfig> = [];
   nativeModules: Class<RCTModule>[];
 
@@ -173,7 +118,7 @@ export default class RCTBridge {
     this.setThread(worker);
   }
 
-  moduleForClass(cls: Class<ModuleClass>): ModuleClass {
+  moduleForClass(cls: Class<RCTModule>): RCTModule {
     invariant(cls.__moduleName, "Class does not seem to be exported");
     return this.modulesByName[bridgeModuleNameForClass(cls)];
   }
@@ -194,29 +139,11 @@ export default class RCTBridge {
   }
 
   callNativeModule(moduleId: number, methodId: number, params: Array<any>) {
-    const moduleConfig = this.moduleConfigs[moduleId];
-
-    invariant(moduleConfig, `No such module with id: ${moduleId}`);
-    const [name, , functions] = moduleConfig;
-
-    invariant(functions, `Module ${name} has no methods to call`);
-    const functionName = functions[methodId];
-
-    invariant(
-      functionName,
-      `No such function in module ${name} with id ${methodId}`
+    const [name] = this.moduleConfigs[moduleId];
+    this.modulesByName[name]._functionMap[methodId].apply(
+      this.modulesByName[name],
+      params
     );
-    const nativeModule = this.modulesByName[name];
-
-    invariant(nativeModule, `No such module with name ${name}`);
-    invariant(
-      nativeModule[functionName],
-      `No such method ${functionName} on module ${name}`
-    );
-
-    // console.log(name, functionName, params);
-
-    nativeModule[functionName].apply(nativeModule, params);
   }
 
   onMessage(message: any) {
@@ -259,61 +186,18 @@ export default class RCTBridge {
   }
 
   initializeModules = () => {
-    // TODO: Finish refactoring module binding and remove
-    this.moduleClasses = [...RCTBridge.RCTModuleClasses];
-    RCTBridge.RCTModuleClasses.forEach((moduleClass: Class<ModuleClass>) => {
-      const module = new moduleClass(this);
-      const moduleName = bridgeModuleNameForClass(moduleClass);
-      this.modulesByName[moduleName] = module;
-    });
-
     this.nativeModules.forEach((moduleClass: Class<RCTModule>) => {
-      const module = new moduleClass(this);
-      const moduleName = moduleClass.name;
+      const module = new moduleClass((this: any));
+      const moduleName = bridgeModuleNameForClass(moduleClass);
+      invariant(
+        !this.modulesByName.hasOwnProperty(moduleName),
+        `Multiple native modules with name ${
+          moduleName
+        } are registered in RCTBridge`
+      );
       this.modulesByName[moduleName];
     });
   };
-
-  generateModuleConfig(name: string, bridgeModule: ModuleClass) {
-    const methodNames = [...new Set(getPropertyNames(bridgeModule))].filter(
-      methodName => methodName.startsWith("__rct_export__")
-    );
-
-    const constants = bridgeModule.constantsToExport
-      ? bridgeModule.constantsToExport()
-      : undefined;
-
-    const allMethods = [];
-    const promiseMethods = [];
-    const syncMethods = [];
-
-    methodNames.forEach(rctName => {
-      if (bridgeModule[rctName]) {
-        const [methodName, methodType] = bridgeModule[rctName].call(
-          bridgeModule
-        );
-        allMethods.push(methodName);
-
-        if (methodType === RCTFunctionTypePromise) {
-          promiseMethods.push(allMethods.length - 1);
-        }
-
-        if (methodType === RCTFunctionTypeSync) {
-          syncMethods.push(allMethods.length - 1);
-        }
-      }
-    });
-    this.moduleConfigs.push(
-      moduleConfigFactory(
-        name,
-        constants,
-        allMethods,
-        promiseMethods,
-        syncMethods
-      )
-    );
-    return [name, constants, allMethods, promiseMethods, syncMethods];
-  }
 
   loadBridgeConfig() {
     const config = this.getInitialModuleConfig();
@@ -327,7 +211,7 @@ export default class RCTBridge {
     const remoteModuleConfig = Object.keys(this.modulesByName).map(
       moduleName => {
         const bridgeModule = this.modulesByName[moduleName];
-        return this.generateModuleConfig(moduleName, bridgeModule);
+        return bridgeModule._describe();
       }
     );
     return { remoteModuleConfig };
@@ -421,23 +305,3 @@ export default class RCTBridge {
     return this.messages.length !== 0;
   }
 }
-
-export function RCT_EXPORT_METHOD(type: RCTFunctionType) {
-  return (target: any, key: any, descriptor: any) => {
-    if (typeof descriptor.value === "function") {
-      Object.defineProperty(target, `__rct_export__${key}`, {
-        ...descriptor,
-        value: () => [key, type]
-      });
-    }
-
-    return descriptor;
-  };
-}
-
-export const RCT_EXPORT_MODULE = (name: string) => (
-  target: Class<ModuleClass>
-) => {
-  target.__moduleName = name;
-  RCTBridge.RCTRegisterModule(target);
-};

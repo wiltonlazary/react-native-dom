@@ -67,7 +67,7 @@ class RCTRootView extends UIView {
       "DeviceInfo"
     ]: any);
 
-    const dimensions = deviceInfoModule.exportedDimensions().window;
+    const dimensions = deviceInfoModule._exportedDimensions().window;
     this.availableSize = {
       width: dimensions.width,
       height: dimensions.height
@@ -76,7 +76,7 @@ class RCTRootView extends UIView {
     this.width = this.availableSize.width;
     this.height = this.availableSize.height;
 
-    const pixelRatio = deviceInfoModule.getDevicePixelRatio();
+    const pixelRatio = deviceInfoModule._getDevicePixelRatio();
     GlobalConfig.setPointScaleFactor(pixelRatio);
 
     this.uiManager = (this.bridge.modulesByName["UIManager"]: any);
@@ -101,7 +101,7 @@ class RCTRootView extends UIView {
   get reactTag(): number {
     if (!this._reactTag) {
       this._reactTag = this.uiManager.allocateRootTag;
-      this.uiManager.registerRootView(this);
+      this.uiManager.registerRootView((this: any));
     }
     return this._reactTag;
   }

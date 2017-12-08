@@ -4,20 +4,20 @@
  */
 
 import invariant from "Invariant";
-import RCTBridge, { RCT_EXPORT_METHOD, RCTFunctionTypeNormal } from "RCTBridge";
+import RCTBridge from "RCTBridge";
+import RCTModule from "RCTModule";
 import NotificationCenter from "NotificationCenter";
 
-class RCTEventEmitter {
-  bridge: RCTBridge;
+class RCTEventEmitter extends RCTModule {
   listenerCount: number = 0;
   _supportedMethods: ?Array<string>;
 
   constructor(bridge: RCTBridge, supportedMethods: ?Array<string>) {
-    this.bridge = bridge;
+    super(bridge);
     this._supportedMethods = supportedMethods;
   }
 
-  supportedMethods(): ?Array<string> {
+  _supportedMethods(): ?Array<string> {
     return this._supportedMethods;
   }
 
@@ -25,8 +25,9 @@ class RCTEventEmitter {
     invariant(
       this.bridge,
       "bridge is not set. This is probably because you've" +
-        `explicitly synthesized the bridge in ${this.constructor
-          .name}, even though it's inherited ` +
+        `explicitly synthesized the bridge in ${
+          this.constructor.name
+        }, even though it's inherited ` +
         "from RCTEventEmitter."
     );
 
@@ -36,8 +37,7 @@ class RCTEventEmitter {
       this.bridge.enqueueJSCall(
         "RCTDeviceEventEmitter",
         "emit",
-        body ? [eventName, body] : [eventName],
-        null
+        body ? [eventName, body] : [eventName]
       );
       NotificationCenter.emitEvent(eventName, [body]);
     } else {
@@ -45,42 +45,38 @@ class RCTEventEmitter {
     }
   }
 
-  startObserving() {
+  _startObserving() {
     /* Does Nothing */
   }
 
-  stopObserving() {
+  _stopObserving() {
     /* Does Nothing */
   }
 
-  @RCT_EXPORT_METHOD(RCTFunctionTypeNormal)
   addListener(eventName: string, callback: ?(body: any) => void) {
     // TODO: Add debug check for supportedEvents
-
     if (callback != null) {
       NotificationCenter.addListener(eventName, callback);
     }
 
     this.listenerCount++;
     if (this.listenerCount === 1) {
-      this.startObserving();
+      this._startObserving();
     }
   }
 
-  removeListener(eventName: string, callback: ?Function) {
+  _removeListener(eventName: string, callback: ?Function) {
     if (callback != null) {
       NotificationCenter.removeListener(eventName, callback);
     }
     this.removeListeners(1);
   }
 
-  @RCT_EXPORT_METHOD(RCTFunctionTypeNormal)
   removeListeners(count: number) {
     // TODO: Add debug check for supportedEvents
-
     this.listenerCount = Math.max(this.listenerCount - count, 0);
     if (this.listenerCount === 0) {
-      this.stopObserving();
+      this._stopObserving();
     }
   }
 }
