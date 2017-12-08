@@ -4,13 +4,15 @@
  */
 import RCTBridge from "RCTBridge";
 import RCTUIManager from "RCTUIManager";
-import UIView, { FrameZero } from "UIView";
+import UIView from "UIView";
 import NotificationCenter from "NotificationCenter";
 import RCTDeviceInfo from "RCTDeviceInfo";
 import RCTTiming from "RCTTiming";
 import RCTTouchHandler from "RCTTouchHandler";
 import CustomElement from "CustomElement";
 import { GlobalConfig } from "yoga-js";
+
+import type RCTModule from "RCTModule";
 
 type Size = { width: number, height: number };
 
@@ -42,6 +44,7 @@ class RCTRootView extends UIView {
     bundle: string,
     moduleName: string,
     parent: Element,
+    nativeModules: Class<RCTModule>[],
     enableHotReload: boolean = false
   ) {
     super();
@@ -56,7 +59,7 @@ class RCTRootView extends UIView {
     }
 
     // initialize bridge
-    this.bridge = new RCTBridge(moduleName, bundle);
+    this.bridge = new RCTBridge(moduleName, bundle, nativeModules);
     this.bridge.bundleFinishedLoading = this.bundleFinishedLoading.bind(this);
     this.bridge.initializeModules();
 

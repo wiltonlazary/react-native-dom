@@ -2,5 +2,7 @@
 {
   "editor.formatOnSave": true,
   "prettier.trailingComma": "none",
-  "flow.useNPMPackagedFlow": true
+  "flow.useNPMPackagedFlow": false,
+  "javascript.validate.enable": false,
+  "flow.enabled": true
 }

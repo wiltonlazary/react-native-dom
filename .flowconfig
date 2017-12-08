@@ -5,6 +5,8 @@
 .*/Examples/.*
 .*/lib/.*
 .*/dist/.*
+.*/RNTester/.*
+.*/Libraries/.*
 
 [include]
 

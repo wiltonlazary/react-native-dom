@@ -17,7 +17,7 @@ import type RCTImageLoader from "RCTImageLoader";
 import type RCTDeviceInfo from "RCTDeviceInfo";
 import type RCTDevLoadingView from "RCTDevLoadingView";
 import type RCTDevSettings from "RCTDevSettings";
-
+import type RCTModule from "RCTModule";
 import type RCTUIManager from "RCTUIManager";
 
 export { RCTFunctionTypeNormal, RCTFunctionTypePromise, RCTFunctionTypeSync };
@@ -72,6 +72,7 @@ if (__DEV__) {
 
 export interface ModuleClass {
   static __moduleName: ?string;
+  constructor(bridge: RCTBridge): ModuleClass;
   setBridge?: RCTBridge => void;
   constantsToExport?: () => { [string]: any };
   [string]: ?Function;
@@ -133,7 +134,7 @@ function generateModuleConfig(name: string, bridgeModule: ModuleClass) {
 }
 
 export default class RCTBridge {
-  static RCTModuleClasses: Array<Class<ModuleClass>> = [];
+  static RCTModuleClasses: Class<ModuleClass>[] = [];
 
   static RCTRegisterModule = (cls: Class<ModuleClass>) => {
     RCTBridge.RCTModuleClasses.push(cls);
@@ -142,6 +143,8 @@ export default class RCTBridge {
   modulesByName: { [name: string]: ModuleClass } = {};
   moduleClasses: Array<Class<ModuleClass>> = [];
   moduleConfigs: Array<ModuleConfig> = [];
+  nativeModules: Class<RCTModule>[];
+
   bundleFinishedLoading: ?() => void;
   messages: Array<NativeCall> = [];
   moduleName: string;
@@ -155,10 +158,15 @@ export default class RCTBridge {
   _devLoadingView: ?RCTDevLoadingView;
   _devSettings: ?RCTDevSettings;
 
-  constructor(moduleName: string, bundle: string) {
+  constructor(
+    moduleName: string,
+    bundle: string,
+    nativeModules: Class<RCTModule>[]
+  ) {
     this.loading = true;
     this.moduleName = moduleName;
     this.bundleLocation = bundle;
+    this.nativeModules = nativeModules;
 
     const bridgeCodeBlob = new Blob([WORKER_SRC]);
     const worker = new Worker(URL.createObjectURL(bridgeCodeBlob));
@@ -251,11 +259,18 @@ export default class RCTBridge {
   }
 
   initializeModules = () => {
+    // TODO: Finish refactoring module binding and remove
     this.moduleClasses = [...RCTBridge.RCTModuleClasses];
     RCTBridge.RCTModuleClasses.forEach((moduleClass: Class<ModuleClass>) => {
       const module = new moduleClass(this);
       const moduleName = bridgeModuleNameForClass(moduleClass);
       this.modulesByName[moduleName] = module;
+    });
+
+    this.nativeModules.forEach((moduleClass: Class<RCTModule>) => {
+      const module = new moduleClass(this);
+      const moduleName = moduleClass.name;
+      this.modulesByName[moduleName];
     });
   };
 

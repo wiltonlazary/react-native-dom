@@ -13,6 +13,10 @@ if (!global.process.env.NODE_ENV) {
 import RCTRootView from "RCTRootView";
 import bundleFromRoot from "BundleFromRoot";
 
+import type RCTModule from "RCTModule";
+
+const builtinNativeModules: Class<RCTModule>[] = [];
+
 // Register Built-in Native Modules
 import "RCTEventDispatcher";
 import "RCTDeviceInfo";
@@ -45,7 +49,8 @@ if (__DEV__) {
 }
 
 type RNDomInstanceOptions = {
-  enableHotReload?: boolean
+  enableHotReload?: boolean,
+  nativeModules?: Class<RCTModule>[]
 };
 
 // React Native Web Entrypoint instance
@@ -62,10 +67,15 @@ export class RNDomInstance {
       ? options.enableHotReload
       : false;
 
+    const userNativeModules = options.nativeModules
+      ? options.nativeModules
+      : [];
+
     this.rootView = new RCTRootView(
       bundleFromRoot(bundle),
       moduleName,
       parent,
+      builtinNativeModules.concat(userNativeModules),
       enableHotReload
     );
   }
