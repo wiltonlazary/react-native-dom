@@ -15,16 +15,16 @@
     "idb-keyval": "^2.3.0",
     "inline-style-prefixer": "^3.0.8",
     "invariant": "^2.2.2",
+    "node-fetch": "^1.7.3",
     "normalize-css-color": "^1.0.2",
+    "opn": "^5.2.0",
     "proxy-polyfill": "^0.1.7",
     "rebound": "^0.0.15",
     "tinycolor2": "^1.4.1",
     "wolfy87-eventemitter": "^5.1.0",
-    "yoga-dom": "^0.0.3",
     "yeoman-environment": "^1.5.3",
     "yeoman-generator": "^0.21.2",
-    "opn": "^5.2.0",
-    "node-fetch": "^1.7.3"
+    "yoga-dom": "^0.0.3"
   },
   "files": ["lib", "Libraries", "local-cli"],
   "peerDependencies": {
