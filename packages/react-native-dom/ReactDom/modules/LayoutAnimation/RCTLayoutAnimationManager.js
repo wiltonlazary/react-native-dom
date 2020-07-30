@@ -1,16 +1,12 @@
-/**
- * @providesModule RCTLayoutAnimationManager
- * @flow
- */
+/** @flow */
 import invariant from "invariant";
 
-import type { Position, Frame } from "InternalLib";
-import type { LayoutChange } from "RCTShadowView";
+import * as MatrixMath from "NativeMatrixMath";
 import type { KeyframeResult } from "RCTKeyframeGenerator";
 import RCTKeyframeGenerator from "RCTKeyframeGenerator";
-import * as MatrixMath from "MatrixMath";
-import typeof _RCTUIManager from "RCTUIManager";
-type RCTUIManager = $Call<$await<_RCTUIManager>>;
+import type { LayoutChange } from "RCTShadowView";
+import type { Position, Frame } from "InternalLib";
+import type RCTUIManager from "RCTUIManager";
 
 const PropertiesEnum = {
   opacity: true,
@@ -76,6 +72,7 @@ class RCTLayoutAnimationManager {
   pendingConfig: ?LayoutAnimationConfig;
   pendingCallback: ?Function;
   removedNodes: number[];
+  addedNodes: number[];
   layoutChanges: LayoutChange[];
 
   constructor(manager: RCTUIManager) {
@@ -90,6 +87,7 @@ class RCTLayoutAnimationManager {
 
   reset() {
     this.removedNodes = [];
+    this.addedNodes = [];
     this.layoutChanges = [];
     this.pendingConfig = undefined;
     this.pendingCallback = undefined;
@@ -100,7 +98,15 @@ class RCTLayoutAnimationManager {
   }
 
   addLayoutChanges(changes: LayoutChange[]) {
-    this.layoutChanges = this.layoutChanges.concat(changes);
+    changes.forEach(this.addLayoutChange.bind(this));
+  }
+
+  addLayoutChange(change: LayoutChange) {
+    this.layoutChanges.push(change);
+  }
+
+  queueAddedNode(tag: number) {
+    this.addedNodes.push(tag);
   }
 
   queueRemovedNode(tag: number) {
@@ -186,8 +192,8 @@ class RCTLayoutAnimationManager {
   ): TransformAnimationConfig {
     return [
       new Array(keyLength).fill({
-        translateX: layout.left,
-        translateY: layout.top,
+        translateX: 0,
+        translateY: 0,
         scaleX: 1.0,
         scaleY: 1.0,
         inverseScaleX: 1.0,
@@ -197,8 +203,8 @@ class RCTLayoutAnimationManager {
         duration: duration,
         layout,
         origin: {
-          x: -1 * layout.width / 2,
-          y: -1 * layout.height / 2
+          x: (-1 * layout.width) / 2,
+          y: (-1 * layout.height) / 2
         }
       }
     ];
@@ -263,9 +269,7 @@ class RCTLayoutAnimationManager {
       delete: deleteKeyConfig
     } = keyframes;
 
-    const addedNodes = this.layoutChanges
-      .filter((lc) => !lc.previousMeasurement)
-      .map((lc) => lc.reactTag);
+    const addedNodes = this.addedNodes;
 
     this.layoutChanges.forEach((layoutChange) => {
       const {
@@ -278,8 +282,7 @@ class RCTLayoutAnimationManager {
       const view = this.manager.viewRegistry.get(reactTag);
       invariant(view, "view does not exist");
 
-      // if there's no previous measurement we can assume the view is created
-      if (!previousMeasurement) {
+      if (addedNodes.includes(reactTag)) {
         // skip if no creation keyframe config
         if (createKeyConfig == null) {
           view.frame = layout;
@@ -352,12 +355,10 @@ class RCTLayoutAnimationManager {
         } = layout;
 
         if (prevTop !== nextTop) {
-          const prevTranslateY = prevTop;
-          const nextTranslateY = nextTop;
-
+          const deltaY = prevTop - nextTop;
           const newFrames = this.createTransformAnimationKeyframes(
-            prevTranslateY,
-            nextTranslateY,
+            deltaY,
+            0,
             updateKeyConfig.keyframes,
             "translateY",
             registry[reactTag][0]
@@ -367,12 +368,10 @@ class RCTLayoutAnimationManager {
         }
 
         if (prevLeft !== nextLeft) {
-          const prevTranslateX = prevLeft;
-          const nextTranslateX = nextLeft;
-
+          const deltaX = prevLeft - nextLeft;
           const newFrames = this.createTransformAnimationKeyframes(
-            prevTranslateX,
-            nextTranslateX,
+            deltaX,
+            0,
             updateKeyConfig.keyframes,
             "translateX",
             registry[reactTag][0]
@@ -380,31 +379,6 @@ class RCTLayoutAnimationManager {
 
           registry[reactTag][0] = newFrames;
         }
-
-        const parentLayout = shadowView.previousLayout;
-        view.reactSubviews.forEach((subView, index) => {
-          if (addedNodes.includes(subView.reactTag)) {
-            const previousLayout =
-              shadowView.reactSubviews[index].previousLayout;
-            const [originalKeyframes, { duration }] = registry[reactTag];
-
-            const adjustedKeyframes = originalKeyframes.map(
-              ({ translateX, translateY }) => ({
-                transform: `translateX(${-translateX +
-                  parentLayout.left +
-                  previousLayout.left}px) translateY(${-translateY +
-                  parentLayout.top +
-                  previousLayout.top}px)`
-              })
-            );
-
-            const config = { duration, fill: "none" };
-
-            animations.push(
-              new KeyframeEffect(subView, adjustedKeyframes, config)
-            );
-          }
-        });
 
         let childContainerTransform = this.childContainerAnimationConfigFactory(
           updateKeyConfig.keyframes.length
@@ -497,6 +471,8 @@ class RCTLayoutAnimationManager {
       );
 
       const layoutStyle = {
+        top: layout.top,
+        left: layout.left,
         width: `${layout.width}px`,
         height: `${layout.height}px`
       };

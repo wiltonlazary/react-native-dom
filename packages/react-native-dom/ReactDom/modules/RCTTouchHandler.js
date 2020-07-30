@@ -1,15 +1,14 @@
-/**
- * @providesModule RCTTouchHandler
- * @flow
- */
+/** @flow */
 
 import detectIt from "detect-it";
 import invariant from "invariant";
 
 import type RCTBridge from "RCTBridge";
-import UIView, { UIChildContainerView } from "UIView";
+import UIView from "UIView";
+import UIChildContainerView from "UIChildContainerView";
 import RCTEventDispatcher from "RCTEventDispatcher";
 import RCTTouchEvent from "RCTTouchEvent";
+import isIOS from "isIOS";
 import guid from "Guid";
 
 type UITouch = {
@@ -71,6 +70,8 @@ class RCTTouchHandler {
   }
 
   static RCTNormalizeInteractionEvent(rawEvent: PointerEvent): ?Array<UITouch> {
+    rawEvent.stopPropagation();
+
     const target: UIView = getFirstParentUIView(rawEvent.target);
 
     if ("which" in rawEvent && rawEvent.which === 3) {
@@ -92,6 +93,9 @@ class RCTTouchHandler {
     ];
   }
 
+  stopPropagation = (e: TouchEvent) => e.stopPropagation();
+  preventDefault = (e: TouchEvent) => e.preventDefault();
+
   attachToView(view: UIView) {
     this.view = view;
     view.addGestureRecognizer(
@@ -99,11 +103,41 @@ class RCTTouchHandler {
       detectIt.deviceType,
       TOUCH_LISTENER_OPTIONS
     );
+
+    if (isIOS) {
+      view.addEventListener(
+        "touchmove",
+        this.stopPropagation,
+        TOUCH_LISTENER_OPTIONS
+      );
+
+      view.parentElement &&
+        view.parentElement.addEventListener(
+          "touchmove",
+          this.preventDefault,
+          TOUCH_LISTENER_OPTIONS
+        );
+    }
   }
 
   detachFromView(view: UIView) {
     this.view = undefined;
     view.removeGestureRecognizer(this, TOUCH_LISTENER_OPTIONS);
+
+    if (isIOS) {
+      view.removeEventListener(
+        "touchmove",
+        this.stopPropagation,
+        TOUCH_LISTENER_OPTIONS
+      );
+
+      view.parentElement &&
+        view.parentElement.removeEventListener(
+          "touchmove",
+          this.preventDefault,
+          TOUCH_LISTENER_OPTIONS
+        );
+    }
   }
 
   recordNewTouches(touches: Array<UITouch>) {

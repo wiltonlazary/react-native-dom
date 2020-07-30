@@ -1,7 +1,4 @@
-/**
- * @providesModule RCTNativeAnimatedNodesManager
- * @flow
- */
+/** @flow */
 
 import invariant from "invariant";
 
@@ -17,6 +14,7 @@ import RCTInterpolationAnimatedNode from "RCTInterpolationAnimatedNode";
 import RCTTransformAnimatedNode from "RCTTransformAnimatedNode";
 import RCTMultiplicationAnimatedNode from "RCTMultiplicationAnimatedNode";
 import RCTAdditionAnimatedNode from "RCTAdditionAnimatedNode";
+import RCTSubtractionAnimatedNode from "RCTSubtractionAnimatedNode";
 import RCTModuloAnimatedNode from "RCTModuloAnimatedNode";
 import RCTDivisionAnimatedNode from "RCTDivisionAnimatedNode";
 import RCTTrackingAnimatedNode from "RCTTrackingAnimatedNode";
@@ -24,8 +22,7 @@ import RCTEventAnimation from "RCTEventAnimation";
 import RCTFrameAnimation from "RCTFrameAnimation";
 import RCTDecayAnimation from "RCTDecayAnimation";
 import RCTSpringAnimation from "RCTSpringAnimation";
-import typeof _RCTUIManager from "RCTUIManager";
-type RCTUIManager = $Call<$await<_RCTUIManager>>;
+import type RCTUIManager from "RCTUIManager";
 
 const NODE_TYPE_MAP: { [typeName: string]: Class<RCTAnimatedNode> } = {
   style: RCTStyleAnimatedNode,
@@ -35,6 +32,7 @@ const NODE_TYPE_MAP: { [typeName: string]: Class<RCTAnimatedNode> } = {
   transform: RCTTransformAnimatedNode,
   multiplication: RCTMultiplicationAnimatedNode,
   addition: RCTAdditionAnimatedNode,
+  subtraction: RCTSubtractionAnimatedNode,
   modulus: RCTModuloAnimatedNode,
   division: RCTDivisionAnimatedNode,
   tracking: RCTTrackingAnimatedNode

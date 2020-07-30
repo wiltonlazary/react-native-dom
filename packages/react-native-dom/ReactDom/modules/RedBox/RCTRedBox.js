@@ -1,14 +1,9 @@
-/**
- * @providesModule RCTRedBox
- * @flow
- */
+/** @flow */
 
-import RCTBridge, {
-  RCTFunctionTypeNormal,
-  RCT_EXPORT_METHOD,
-  RCT_EXPORT_MODULE
-} from "RCTBridge";
 import RedBox from "rndom-redbox";
+
+import RCTModule from "RCTModule";
+import type RCTBridge from "RCTBridge";
 import type { StackEntry } from "RCTExceptionsManager";
 
 function getFileName(path) {
@@ -19,9 +14,9 @@ function getFileName(path) {
     .pop();
 }
 
-@RCT_EXPORT_MODULE("RCTRedBox")
-class RCTRedBox {
-  bridge: RCTBridge;
+class RCTRedBox extends RCTModule {
+  static moduleName = "RCTRedBox";
+
   domRoot: HTMLElement;
   currentBox: ?RedBox;
 
@@ -29,7 +24,7 @@ class RCTRedBox {
   _lastStackTrace: ?(StackEntry[]);
 
   constructor(bridge: RCTBridge) {
-    this.bridge = bridge;
+    super(bridge);
 
     this.domRoot = document.createElement("div");
     this.domRoot.setAttribute("id", "redbox");

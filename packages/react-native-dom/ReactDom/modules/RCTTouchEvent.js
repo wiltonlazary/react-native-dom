@@ -1,7 +1,4 @@
-/**
- * @providesModule RCTTouchEvent
- * @flow
- */
+/** @flow */
 
 import invariant from "invariant";
 
@@ -87,10 +84,6 @@ class RCTTouchEvent implements RCTEvent {
       this.reactTouches,
       this.changedIndexes
     ];
-  }
-
-  coalescingKey(): number {
-    return this.coalescingKey;
   }
 }
 

@@ -1,7 +1,4 @@
-/**
- * @providesModule RCTScrollView
- * @flow
- */
+/** @flow */
 
 import detectIt from "detect-it";
 import debounce from "debounce";
@@ -11,13 +8,14 @@ import type { Frame, Inset, Size, Position } from "InternalLib";
 import RCTView from "RCTView";
 import UIView from "UIView";
 import type RCTBridge from "RCTBridge";
-import CustomElement from "CustomElement";
 import { type RCTEvent } from "RCTEventDispatcher";
 import RCTScrollViewLocalData from "RCTScrollViewLocalData";
 import isIOS from "isIOS";
 import RCTEventDispatcher, {
   normalizeInputEventName
 } from "RCTEventDispatcher";
+
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 const SCROLL_LISTENER_OPTIONS = detectIt.passiveEvents
   ? { passive: true }
@@ -133,8 +131,7 @@ class RCTScrollEvent implements RCTEvent {
   }
 }
 
-@CustomElement("rct-scroll-content-view")
-export class RCTScrollContentView extends RCTView {
+class RCTScrollContentView extends RCTView {
   constructor(bridge: RCTBridge) {
     super(bridge);
     this.updateHostStyle({
@@ -144,8 +141,10 @@ export class RCTScrollContentView extends RCTView {
       contain: "layout style"
     });
 
-    // vastly improves scrolling performance (especially on sfarai)
-    this.addWillChange("transform");
+    // vastly improves scrolling performance (especially on Safari)
+    if (isSafari) {
+      this.addWillChange("transform");
+    }
   }
 
   set frame(value: Frame) {
@@ -189,9 +188,9 @@ function setScrollPadding(node: HTMLElement) {
   }
 }
 
-@CustomElement("rct-scroll-view")
+customElements.define("rct-scroll-content-view", RCTScrollContentView);
+
 class RCTScrollView extends RCTView {
-  bridge: RCTBridge;
   manager: *;
 
   isScrolling: boolean;
@@ -213,6 +212,7 @@ class RCTScrollView extends RCTView {
     this.manager = bridge.uiManager;
 
     this.updateHostStyle("contain", "strict");
+    this.updateChildContainerStyle("contain", "style size");
 
     if (!this.hasScrollParent()) {
       this.updateHostStyle("overscrollBehavior", "contain");
@@ -228,7 +228,9 @@ class RCTScrollView extends RCTView {
     this._overflow = "scroll";
     this._scrollEnabled = true;
 
-    this.addWillChange("transform");
+    if (isSafari) {
+      this.addWillChange("transform");
+    }
 
     this.addEventListener("scroll", this.handleScroll, SCROLL_LISTENER_OPTIONS);
 
@@ -236,7 +238,7 @@ class RCTScrollView extends RCTView {
       this.addEventListener(
         "touchstart",
         this.onTouchStart,
-        detectIt.passiveEvents ? { passive: false } : false
+        detectIt.passiveEvents ? { passive: true } : false
       );
     }
   }
@@ -347,6 +349,10 @@ class RCTScrollView extends RCTView {
     });
 
     return updatedChildFrames;
+  }
+
+  connectedCallback() {
+    this.correctScrollPosition();
   }
 
   boundsDidChange(contentView: RCTView) {
@@ -482,6 +488,35 @@ class RCTScrollView extends RCTView {
       ...eventArgs
     );
     this.bridge.eventDispatcher.sendEvent(momentumScrollEvent);
+    this.correctScrollPosition();
+  }
+
+  correctScrollPosition() {
+    const scrollNudge = 1;
+
+    if (isIOS) {
+      if (!this._horizontal) {
+        const endTopPosition = this.scrollTop + this.contentSize.height;
+        if (this.scrollTop <= 0 && this.scrollTop >= -0.1) {
+          this.scrollTop = scrollNudge;
+        } else if (
+          endTopPosition >= this.scrollHeight &&
+          endTopPosition <= this.scrollHeight + 0.1
+        ) {
+          this.scrollTop = this.scrollTop - scrollNudge;
+        }
+      } else {
+        const endLeftPosition = this.scrollLeft + this.contentSize.width;
+        if (this.scrollLeft <= 0 && this.scrollLeft >= -0.1) {
+          this.scrollLeft = scrollNudge;
+        } else if (
+          endLeftPosition >= this.scrollWidth &&
+          endLeftPosition <= this.scrollWidth + 0.1
+        ) {
+          this.scrollLeft = this.scrollLeft - scrollNudge;
+        }
+      }
+    }
   }
 
   handleScrollTick(...eventArgs: ScrollEventArgs) {
@@ -508,8 +543,13 @@ class RCTScrollView extends RCTView {
 
   set touchable(value: boolean) {
     // super.touchable = value;
+    this._touchable = value;
+    this.updateDerivedPointerEvents();
     this.updateHostStyle("cursor", "auto");
   }
 }
 
+customElements.define("rct-scroll-view", RCTScrollView);
+
 export default RCTScrollView;
+export { RCTScrollContentView };
